@@ -1,0 +1,75 @@
+// Go programs sometime generate output you can't easily control like panics and
+// net/http recovered panics. By default, those output contains multiple lines
+// with stack traces. This does not play well with most logging systems that will
+// generate one log event per outputed line.
+//
+// The gologpiper is a simple program that reads those kinds of log on its standard
+// input, and merge all lines of a given panic or standard multi-lines Go log message
+// into a single quotted line.
+//
+// Usage
+//
+// Send panics and other program panics to syslog:
+//
+//     mygoprogram 2>&1 | gologpiper | logger -t mygoprogram -p local7.err
+package main
+
+import (
+	"bufio"
+	"flag"
+	"io"
+	"log"
+	"os"
+	"os/signal"
+	"time"
+
+	"github.com/rs/gologpiper/event"
+	"github.com/rs/gologpiper/parser"
+)
+
+func main() {
+	prefix := flag.String("prefix", "", "Go logger prefix set in the application if any.")
+	flag.Parse()
+	run(os.Stdin, os.Stdout, *prefix)
+}
+
+func run(in io.Reader, out io.Writer, prefix string) {
+	r := bufio.NewReader(in)
+	cont := false
+	e := event.New(out, "\n")
+	autoFlushDelay := 5 * time.Millisecond
+	go func() {
+		// Flush before exit
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, os.Interrupt, os.Kill)
+		<-c
+		e.Flush()
+	}()
+	for {
+		line, isPrefix, err := r.ReadLine()
+		if err != nil {
+			e.Flush()
+			if err != io.EOF {
+				log.Fatal(err)
+			}
+			break
+		}
+		// Stop the previous auto-flush if any so we don't accidently flush
+		// before reading the new line.
+		e.Stop()
+		if !cont {
+			if parser.IsPanic(line) || parser.IsLog(line, prefix) {
+				// Flush previous event if any
+				e.Flush()
+			} else if !e.Empty() {
+				// The line is a continuation, add a quoted carriage return before
+				// appending it to the current event.
+				e.Write([]byte{'\\', 'n'})
+			}
+		}
+		e.Write(line)
+		// Auto-flush the event after if no new line is read for the given delay.
+		e.AutoFlush(autoFlushDelay)
+		cont = isPrefix
+	}
+}
