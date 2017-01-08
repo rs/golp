@@ -15,10 +15,12 @@
 //
 // Options:
 //
-//     -prefix string
-//     		Go logger prefix set in the application if any.
-//     -strip
-//     		Strip log line timestamps on output.
+// 		-json
+//         	Wrap messages to JSON one object per line.
+// 		-prefix string
+//         	Go logger prefix set in the application if any.
+// 		-strip
+//         	Strip log line timestamps on output.
 package main
 
 import (
@@ -37,14 +39,15 @@ import (
 func main() {
 	prefix := flag.String("prefix", "", "Go logger prefix set in the application if any.")
 	strip := flag.Bool("strip", false, "Strip log line timestamps on output.")
+	json := flag.Bool("json", false, "Wrap messages to JSON one object per line.")
 	flag.Parse()
-	run(os.Stdin, os.Stdout, *prefix, *strip)
+	run(os.Stdin, os.Stdout, *prefix, *strip, *json)
 }
 
-func run(in io.Reader, out io.Writer, prefix string, strip bool) {
+func run(in io.Reader, out io.Writer, prefix string, strip, json bool) {
 	r := bufio.NewReader(in)
 	cont := false
-	e := event.New(out, "\n")
+	e := event.New(out, "\n", json)
 	autoFlushDelay := 5 * time.Millisecond
 	go func() {
 		// Flush before exit
@@ -79,7 +82,7 @@ func run(in io.Reader, out io.Writer, prefix string, strip bool) {
 			} else if !e.Empty() {
 				// The line is a continuation, add a quoted carriage return before
 				// appending it to the current event.
-				e.Write([]byte{'\\', 'n'})
+				e.Write([]byte{'\n'})
 			}
 		}
 		e.Write(line)

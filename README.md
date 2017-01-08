@@ -14,11 +14,12 @@ Send panics and other program panics to syslog:
 
 Options:
 
+    -json
+            Wrap messages to JSON one object per line.
     -prefix string
-    	Go logger prefix set in the application if any.
+            Go logger prefix set in the application if any.
     -strip
-    	Strip log line timestamps on output.
-
+            Strip log line timestamps on output.
 ## License
 
 All source code is licensed under the [MIT License](https://raw.github.com/rs/golp/master/LICENSE).
