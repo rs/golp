@@ -3,7 +3,7 @@
 // with stack traces. This does not play well with most logging systems that will
 // generate one log event per outputed line.
 //
-// The gologpiper is a simple program that reads those kinds of log on its standard
+// The golp is a simple program that reads those kinds of log on its standard
 // input, and merge all lines of a given panic or standard multi-lines Go log message
 // into a single quotted line.
 //
@@ -11,7 +11,7 @@
 //
 // Send panics and other program panics to syslog:
 //
-//     mygoprogram 2>&1 | gologpiper | logger -t mygoprogram -p local7.err
+//     mygoprogram 2>&1 | golp | logger -t mygoprogram -p local7.err
 //
 // Options:
 //
@@ -30,8 +30,8 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/rs/gologpiper/event"
-	"github.com/rs/gologpiper/parser"
+	"github.com/rs/golp/event"
+	"github.com/rs/golp/parser"
 )
 
 func main() {
