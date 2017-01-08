@@ -12,6 +12,13 @@
 // Send panics and other program panics to syslog:
 //
 //     mygoprogram 2>&1 | gologpiper | logger -t mygoprogram -p local7.err
+//
+// Options:
+//
+//     -prefix string
+//     		Go logger prefix set in the application if any.
+//     -strip
+//     		Strip log line timestamps on output.
 package main
 
 import (
@@ -29,11 +36,12 @@ import (
 
 func main() {
 	prefix := flag.String("prefix", "", "Go logger prefix set in the application if any.")
+	strip := flag.Bool("strip", false, "Strip log line timestamps on output.")
 	flag.Parse()
-	run(os.Stdin, os.Stdout, *prefix)
+	run(os.Stdin, os.Stdout, *prefix, *strip)
 }
 
-func run(in io.Reader, out io.Writer, prefix string) {
+func run(in io.Reader, out io.Writer, prefix string, strip bool) {
 	r := bufio.NewReader(in)
 	cont := false
 	e := event.New(out, "\n")
@@ -58,9 +66,16 @@ func run(in io.Reader, out io.Writer, prefix string) {
 		// before reading the new line.
 		e.Stop()
 		if !cont {
-			if parser.IsPanic(line) || parser.IsLog(line, prefix) {
+			if parser.IsPanic(line) {
 				// Flush previous event if any
 				e.Flush()
+			} else if index := parser.IsLog(line, prefix); index > 0 {
+				// Flush previous event if any
+				e.Flush()
+				if strip {
+					// Strop log message header (prefix, timestamp)
+					line = line[index:]
+				}
 			} else if !e.Empty() {
 				// The line is a continuation, add a quoted carriage return before
 				// appending it to the current event.

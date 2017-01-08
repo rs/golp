@@ -12,6 +12,13 @@ Send panics and other program panics to syslog:
 
     mygoprogram 2>&1 | gologpiper | logger -t mygoprogram -p local7.err
 
+Options:
+
+    -prefix string
+    	Go logger prefix set in the application if any.
+    -strip
+    	Strip log line timestamps on output.
+
 ## License
 
 All source code is licensed under the [MIT License](https://raw.github.com/rs/gologpiper/master/LICENSE).

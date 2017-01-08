@@ -13,9 +13,12 @@ func TestRun(t *testing.T) {
 		input  string
 		output string
 		prefix string
+		strip  bool
 	}{
-		{"default", "testdata/intput.txt", "testdata/output.txt", ""},
-		{"prefix", "testdata/intput_prefix.txt", "testdata/output_prefix.txt", "prefix "},
+		{"default", "testdata/intput.txt", "testdata/output.txt", "", false},
+		{"stripped", "testdata/intput.txt", "testdata/output_strip.txt", "", true},
+		{"prefix", "testdata/intput_prefix.txt", "testdata/output_prefix.txt", "prefix ", false},
+		{"prefix_strip", "testdata/intput_prefix.txt", "testdata/output_prefix_strip.txt", "prefix ", true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -31,7 +34,7 @@ func TestRun(t *testing.T) {
 			defer expect.Close()
 			eb, _ := ioutil.ReadAll(expect)
 			out := &bytes.Buffer{}
-			run(in, out, tt.prefix)
+			run(in, out, tt.prefix, tt.strip)
 			if want, got := string(eb), out.String(); want != got {
 				t.Errorf("invalid output:\ngot:\n%s\nwant:\n%s", got, want)
 			}

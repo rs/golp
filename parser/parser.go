@@ -6,33 +6,34 @@ import "bytes"
 var (
 	panicPrefix       = []byte("panic: ")
 	logPrefixPatterns = [][]byte{
+		[]byte("2000/01/02 12:00:00.000000 "),
+		[]byte("2000/01/02 12:00:00 "),
+		[]byte("12:00:00.000000 "),
 		[]byte("2000/01/02 "),
 		[]byte("12:00:00 "),
-		[]byte("12:00:00.000000 "),
-		[]byte("2000/01/02 12:00:00 "),
-		[]byte("2000/01/02 12:00:00.000000 "),
 	}
 )
 
-// IsPanic returns true if the line is the first line of a Go panic
+// IsPanic returns true if the line is the first line of a Go panic.
 func IsPanic(line []byte) bool {
 	return bytes.HasPrefix(line, panicPrefix)
 }
 
-// IsLog returns true if the line is the first line of log produced
-// by the Go logger
-func IsLog(line []byte, prefix string) bool {
+// IsLog returns the index of the begining of the log message if the line
+// is the first line of log produced by the Go logger. If not a log message,
+// -1 is returned.
+func IsLog(line []byte, prefix string) int {
 	// example: 2017/01/06 14:16:13 log line
 	if len(line) < len(prefix) {
-		return false
+		return -1
 	}
 	line = line[len(prefix):]
 	for _, pattern := range logPrefixPatterns {
 		if matchPattern(line, pattern) {
-			return true
+			return len(prefix) + len(pattern)
 		}
 	}
-	return false
+	return -1
 }
 
 // matchPattern return true if the given line starts with the given pattern.
