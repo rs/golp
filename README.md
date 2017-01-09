@@ -33,12 +33,6 @@ Send panics as JSON:
 
     > Jan  8 16:59:26 host mygoprogram: {"message": "panic: panic: test\n\ngoroutine 1 [running]:\npanic(0x…
 
-Add some fields to the JSON output (using [jq](https://stedolan.github.io/jq/)):
-
-    mygoprogram 2>&1 | golp --json | jq -c '. + {"level": "error", "program": "mygoprogram"}'
-
-    > {"level": "error", "program": "mygoprogram", "message": "panic: panic: test\n\ngoroutine 1 [running]:\npanic(0x…
-
 ## License
 
 All source code is licensed under the [MIT License](https://raw.github.com/rs/golp/master/LICENSE).
