@@ -11,30 +11,32 @@ import (
 
 // Event holds a buffer of a log event content.
 type Event struct {
-	out   io.Writer
-	buf   *bytes.Buffer
-	wbuf  []byte
-	json  bool
-	eol   []byte
-	start chan (<-chan time.Time) // timer
-	stop  chan bool
-	close chan bool
+	out     io.Writer
+	buf     *bytes.Buffer
+	wbuf    []byte
+	jsonKey string
+	eol     []byte
+	start   chan (<-chan time.Time) // timer
+	stop    chan bool
+	close   chan bool
 }
 
 var autoFlushCalledHook = func() {}
 
 // New creates an event buffer writing to the out writer on flush.
 // When flush, the eol string is appended to the event content.
-func New(out io.Writer, eol string, json bool) *Event {
+// When jsonKey is not empty, the output is wrapped into a JSON object
+// with jsonKey as message key.
+func New(out io.Writer, eol string, jsonKey string) *Event {
 	e := &Event{
-		out:   out,
-		buf:   bytes.NewBuffer(make([]byte, 0, 4096)),
-		wbuf:  make([]byte, 0, 2),
-		json:  json,
-		eol:   []byte(eol),
-		start: make(chan (<-chan time.Time)),
-		stop:  make(chan bool),
-		close: make(chan bool, 1),
+		out:     out,
+		buf:     bytes.NewBuffer(make([]byte, 0, 4096)),
+		wbuf:    make([]byte, 0, 2),
+		jsonKey: jsonKey,
+		eol:     []byte(eol),
+		start:   make(chan (<-chan time.Time)),
+		stop:    make(chan bool),
+		close:   make(chan bool, 1),
 	}
 	go e.autoFlushLoop()
 	return e
@@ -96,8 +98,8 @@ func (e *Event) flush() {
 	if e.buf.Len() == 0 {
 		return
 	}
-	if e.json {
-		if _, err := fmt.Fprintf(e.out, `{"message": "`); err != nil {
+	if e.jsonKey != "" {
+		if _, err := fmt.Fprintf(e.out, "{\"%s\": \"", e.jsonKey); err != nil {
 			log.Fatal(err)
 		}
 	} else {
@@ -106,7 +108,7 @@ func (e *Event) flush() {
 	if _, err := io.Copy(e.out, e.buf); err != nil {
 		log.Fatal(err)
 	}
-	if e.json {
+	if e.jsonKey != "" {
 		if _, err := fmt.Fprintf(e.out, `"}%s`, e.eol); err != nil {
 			log.Fatal(err)
 		}

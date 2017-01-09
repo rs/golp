@@ -8,18 +8,35 @@ The `golp` is a simple program that reads those kinds of log on its standard inp
 
 ## Usage
 
+Options:
+
+    --json
+            Wrap messages to JSON one object per line.
+    -json-key string
+            The key name to use for the message in JSON mode. (default "message")
+    --prefix string
+            Go logger prefix set in the application if any.
+    --strip
+            Strip log line timestamps on output.
+
 Send panics and other program panics to syslog:
 
     mygoprogram 2>&1 | golp | logger -t mygoprogram -p local7.err
 
-Options:
+    > Jan  8 16:59:26 host panic: panic: test\n\ngoroutine 1 [running]:\npanic(0x…
 
-    -json
-            Wrap messages to JSON one object per line.
-    -prefix string
-            Go logger prefix set in the application if any.
-    -strip
-            Strip log line timestamps on output.
+Send panics as JSON:
+
+    mygoprogram 2>&1 | golp --json | logger -t mygoprogram -p local7.err
+
+    > Jan  8 16:59:26 host {"message": "panic: panic: test\n\ngoroutine 1 [running]:\npanic(0x…
+
+Add some fields to the JSON output (using [jq](https://stedolan.github.io/jq/)):
+
+    mygoprogram 2>&1 | golp --json | jq -c '. + {"level": "error", "program": "mygoprogram"}'
+
+    > {"level": "error", "program": "mygoprogram", "message": "panic: panic: test\n\ngoroutine 1 [running]:\npanic(0x…
+
 ## License
 
 All source code is licensed under the [MIT License](https://raw.github.com/rs/golp/master/LICENSE).

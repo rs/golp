@@ -17,10 +17,30 @@
 //
 // 		-json
 //         	Wrap messages to JSON one object per line.
+//  	-json-key string
+//  		The key name to use for the message in JSON mode. (default "message")
 // 		-prefix string
 //         	Go logger prefix set in the application if any.
 // 		-strip
 //         	Strip log line timestamps on output.
+//
+// Send panics and other program panics to syslog:
+//
+//     mygoprogram 2>&1 | golp | logger -t mygoprogram -p local7.err
+//
+//     > Jan  8 16:59:26 host panic: panic: test\n\ngoroutine 1 [running]:\npanic(0x…
+//
+// Send panics as JSON:
+//
+//     mygoprogram 2>&1 | golp --json | logger -t mygoprogram -p local7.err
+//
+//     > Jan  8 16:59:26 host {"message": "panic: panic: test\n\ngoroutine 1 [running]:\npanic(0x…
+//
+// Add some fields to the JSON output (using [jq](https://stedolan.github.io/jq/)):
+//
+//     mygoprogram 2>&1 | golp --json | jq -c '. + {"level": "error", "program": "mygoprogram"}'
+//
+//     > {"level": "error", "program": "mygoprogram", "message": "panic: panic: test\n\ngoroutine 1 [running]:\npanic(0x…
 package main
 
 import (
@@ -40,14 +60,18 @@ func main() {
 	prefix := flag.String("prefix", "", "Go logger prefix set in the application if any.")
 	strip := flag.Bool("strip", false, "Strip log line timestamps on output.")
 	json := flag.Bool("json", false, "Wrap messages to JSON one object per line.")
+	jsonKey := flag.String("json-key", "message", "The key name to use for the message in JSON mode.")
 	flag.Parse()
-	run(os.Stdin, os.Stdout, *prefix, *strip, *json)
+	if !*json {
+		*jsonKey = ""
+	}
+	run(os.Stdin, os.Stdout, *prefix, *strip, *jsonKey)
 }
 
-func run(in io.Reader, out io.Writer, prefix string, strip, json bool) {
+func run(in io.Reader, out io.Writer, prefix string, strip bool, jsonKey string) {
 	r := bufio.NewReader(in)
 	cont := false
-	e := event.New(out, "\n", json)
+	e := event.New(out, "\n", jsonKey)
 	autoFlushDelay := 5 * time.Millisecond
 	go func() {
 		// Flush before exit
