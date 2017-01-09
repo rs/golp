@@ -15,14 +15,16 @@
 //
 // Options:
 //
-// 		-json
-//         	Wrap messages to JSON one object per line.
-//  	-json-key string
-//  		The key name to use for the message in JSON mode. (default "message")
-// 		-prefix string
-//         	Go logger prefix set in the application if any.
-// 		-strip
-//         	Strip log line timestamps on output.
+//      -json
+//          Wrap messages to JSON one object per line.
+//      -json-key string
+//          The key name to use for the message in JSON mode. (default "message")
+//      -max-len int
+//          Strip messages to not exceed this length.
+//      -prefix string
+//          Go logger prefix set in the application if any.
+//      -strip
+//          Strip log line timestamps on output.
 //
 // Send panics and other program panics to syslog:
 //
@@ -57,6 +59,7 @@ import (
 )
 
 func main() {
+	maxLen := flag.Int("max-len", 0, "Strip messages to not exceed this length.")
 	prefix := flag.String("prefix", "", "Go logger prefix set in the application if any.")
 	strip := flag.Bool("strip", false, "Strip log line timestamps on output.")
 	json := flag.Bool("json", false, "Wrap messages to JSON one object per line.")
@@ -65,13 +68,13 @@ func main() {
 	if !*json {
 		*jsonKey = ""
 	}
-	run(os.Stdin, os.Stdout, *prefix, *strip, *jsonKey)
+	run(os.Stdin, os.Stdout, *maxLen, *prefix, *strip, *jsonKey)
 }
 
-func run(in io.Reader, out io.Writer, prefix string, strip bool, jsonKey string) {
+func run(in io.Reader, out io.Writer, maxLen int, prefix string, strip bool, jsonKey string) {
 	r := bufio.NewReader(in)
 	cont := false
-	e := event.New(out, "\n", jsonKey)
+	e := event.New(out, maxLen, "\n", jsonKey)
 	autoFlushDelay := 5 * time.Millisecond
 	go func() {
 		// Flush before exit

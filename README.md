@@ -14,6 +14,8 @@ Options:
             Wrap messages to JSON one object per line.
     -json-key string
             The key name to use for the message in JSON mode. (default "message")
+    -max-len int
+    	    Strip messages to not exceed this length.
     --prefix string
             Go logger prefix set in the application if any.
     --strip

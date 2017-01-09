@@ -1,0 +1,7 @@
+{"message":"http: panic"}
+{"message":"line1\nline"}
+{"message":"line1\nline"}
+{"message":"line1\nline"}
+{"message":"/tmp/test.g"}
+{"message":"test.go:31:"}
+{"message":"panic: test"}

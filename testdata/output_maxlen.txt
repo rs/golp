@@ -1,0 +1,7 @@
+http: panic se
+line1\nline2
+line1\nline2
+line1\nline2
+/tmp/test.go:3
+test.go:31: li
+panic: test\n

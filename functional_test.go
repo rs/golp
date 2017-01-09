@@ -9,17 +9,20 @@ import (
 
 func TestRun(t *testing.T) {
 	tests := map[string]struct {
-		input  string
-		output string
-		prefix string
-		strip  bool
-		json   bool
+		input   string
+		output  string
+		maxLen  int
+		prefix  string
+		strip   bool
+		jsonKey string
 	}{
-		"default":      {"testdata/intput.txt", "testdata/output.txt", "", false, false},
-		"stripped":     {"testdata/intput.txt", "testdata/output_strip.txt", "", true, false},
-		"json_strip":   {"testdata/intput.txt", "testdata/output_strip.json", "", true, true},
-		"prefix":       {"testdata/intput_prefix.txt", "testdata/output_prefix.txt", "prefix ", false, false},
-		"prefix_strip": {"testdata/intput_prefix.txt", "testdata/output_prefix_strip.txt", "prefix ", true, false},
+		"default":      {"testdata/intput.txt", "testdata/output.txt", 0, "", false, ""},
+		"stripped":     {"testdata/intput.txt", "testdata/output_strip.txt", 0, "", true, ""},
+		"maxlen":       {"testdata/intput.txt", "testdata/output_maxlen.txt", 15, "", true, ""},
+		"json_strip":   {"testdata/intput.txt", "testdata/output_strip.json", 0, "", true, "message"},
+		"json_maxlen":  {"testdata/intput.txt", "testdata/output_maxlen.json", 26, "", true, "message"},
+		"prefix":       {"testdata/intput_prefix.txt", "testdata/output_prefix.txt", 0, "prefix ", false, ""},
+		"prefix_strip": {"testdata/intput_prefix.txt", "testdata/output_prefix_strip.txt", 0, "prefix ", true, ""},
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -35,7 +38,7 @@ func TestRun(t *testing.T) {
 			defer expect.Close()
 			eb, _ := ioutil.ReadAll(expect)
 			out := &bytes.Buffer{}
-			run(in, out, tt.prefix, tt.strip, tt.json)
+			run(in, out, tt.maxLen, tt.prefix, tt.strip, tt.jsonKey)
 			if want, got := string(eb), out.String(); want != got {
 				t.Errorf("invalid output:\ngot:\n%s\nwant:\n%s", got, want)
 			}

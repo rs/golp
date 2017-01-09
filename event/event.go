@@ -11,14 +11,16 @@ import (
 
 // Event holds a buffer of a log event content.
 type Event struct {
-	out     io.Writer
-	buf     *bytes.Buffer
-	wbuf    []byte
-	jsonKey string
-	eol     []byte
-	start   chan (<-chan time.Time) // timer
-	stop    chan bool
-	close   chan bool
+	out      io.Writer
+	buf      *bytes.Buffer
+	wbuf     []byte
+	maxLen   int
+	exceeded bool
+	prefix   []byte
+	suffix   []byte
+	start    chan (<-chan time.Time) // timer
+	stop     chan bool
+	close    chan bool
 }
 
 var autoFlushCalledHook = func() {}
@@ -27,16 +29,21 @@ var autoFlushCalledHook = func() {}
 // When flush, the eol string is appended to the event content.
 // When jsonKey is not empty, the output is wrapped into a JSON object
 // with jsonKey as message key.
-func New(out io.Writer, eol string, jsonKey string) *Event {
+func New(out io.Writer, maxLen int, eol string, jsonKey string) *Event {
 	e := &Event{
-		out:     out,
-		buf:     bytes.NewBuffer(make([]byte, 0, 4096)),
-		wbuf:    make([]byte, 0, 2),
-		jsonKey: jsonKey,
-		eol:     []byte(eol),
-		start:   make(chan (<-chan time.Time)),
-		stop:    make(chan bool),
-		close:   make(chan bool, 1),
+		out:    out,
+		buf:    bytes.NewBuffer(make([]byte, 0, 4096)),
+		wbuf:   make([]byte, 0, 2),
+		maxLen: maxLen,
+		start:  make(chan (<-chan time.Time)),
+		stop:   make(chan bool),
+		close:  make(chan bool, 1),
+	}
+	if jsonKey != "" {
+		e.prefix = []byte(fmt.Sprintf(`{"%s":"`, jsonKey))
+		e.suffix = []byte(fmt.Sprintf(`"}%s`, eol))
+	} else {
+		e.suffix = []byte(eol)
 	}
 	go e.autoFlushLoop()
 	return e
@@ -50,6 +57,14 @@ func (e *Event) Empty() bool {
 // Write appends the contents of p to the buffer. The return value
 // n is the length of p; err is always nil.
 func (e *Event) Write(p []byte) (n int, err error) {
+	if e.exceeded {
+		return
+	}
+	overhead := len(e.prefix) + len(e.suffix)
+	if e.maxLen > 0 && e.buf.Len()+overhead > e.maxLen {
+		e.exceeded = true
+		return
+	}
 	e.buf.Grow(len(p))
 	for _, b := range p {
 		e.wbuf = e.wbuf[:0]
@@ -70,6 +85,10 @@ func (e *Event) Write(p []byte) (n int, err error) {
 			e.wbuf = append(e.wbuf, `\t`...)
 		default:
 			e.wbuf = append(e.wbuf, b)
+		}
+		if e.maxLen > 0 && e.buf.Len()+overhead+len(e.wbuf) > e.maxLen {
+			e.exceeded = true
+			break
 		}
 		var _n int
 		_n, err = e.buf.Write(e.wbuf)
@@ -98,22 +117,19 @@ func (e *Event) flush() {
 	if e.buf.Len() == 0 {
 		return
 	}
-	if e.jsonKey != "" {
-		if _, err := fmt.Fprintf(e.out, "{\"%s\": \"", e.jsonKey); err != nil {
+	if len(e.prefix) > 0 {
+		if _, err := e.out.Write(e.prefix); err != nil {
 			log.Fatal(err)
 		}
-	} else {
-		e.buf.Write(e.eol)
+	}
+	if len(e.suffix) > 0 {
+		e.buf.Write(e.suffix)
 	}
 	if _, err := io.Copy(e.out, e.buf); err != nil {
 		log.Fatal(err)
 	}
-	if e.jsonKey != "" {
-		if _, err := fmt.Fprintf(e.out, `"}%s`, e.eol); err != nil {
-			log.Fatal(err)
-		}
-	}
 	e.buf.Reset()
+	e.exceeded = false
 }
 
 // AutoFlush schedule a flush after delay.
