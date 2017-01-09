@@ -15,6 +15,8 @@
 //
 // Options:
 //
+//      -ctx value
+//          A key=value to add to the JSON output (can be repeated).
 //      -json
 //          Wrap messages to JSON one object per line.
 //      -json-key string
@@ -37,20 +39,43 @@
 //     mygoprogram 2>&1 | golp --json | logger -t mygoprogram -p local7.err
 //
 //     > Jan  8 16:59:26 host mygoprogram: {"message": "panic: panic: test\n\ngoroutine 1 [running]:\npanic(0x…
+// Add context:
+//
+//     mygoprogram 2>&1 | golp --json --ctx level=error --ctx program=mygoprogram
+//
+//     > {"level":"info","program":"mygoprogram","message":"panic: panic: test\n\ngoroutine 1 [running]:\npanic(0x…
 package main
 
 import (
 	"bufio"
+	"errors"
 	"flag"
+	"fmt"
 	"io"
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 
 	"github.com/rs/golp/event"
 	"github.com/rs/golp/parser"
 )
+
+type context map[string]string
+
+func (c *context) String() string {
+	return fmt.Sprint(*c)
+}
+
+func (c *context) Set(value string) error {
+	i := strings.IndexByte(value, '=')
+	if i == -1 {
+		return errors.New("missing context value")
+	}
+	(*c)[value[:i]] = value[i+1:]
+	return nil
+}
 
 func main() {
 	maxLen := flag.Int("max-len", 0, "Strip messages to not exceed this length.")
@@ -58,17 +83,22 @@ func main() {
 	strip := flag.Bool("strip", false, "Strip log line timestamps on output.")
 	json := flag.Bool("json", false, "Wrap messages to JSON one object per line.")
 	jsonKey := flag.String("json-key", "message", "The key name to use for the message in JSON mode.")
+	ctx := context{}
+	flag.Var(&ctx, "ctx", "A key=value to add to the JSON output (can be repeated).")
 	flag.Parse()
 	if !*json {
 		*jsonKey = ""
 	}
-	run(os.Stdin, os.Stdout, *maxLen, *prefix, *strip, *jsonKey)
+	run(os.Stdin, os.Stdout, ctx, *maxLen, *prefix, *strip, *jsonKey)
 }
 
-func run(in io.Reader, out io.Writer, maxLen int, prefix string, strip bool, jsonKey string) {
+func run(in io.Reader, out io.Writer, ctx map[string]string, maxLen int, prefix string, strip bool, jsonKey string) {
 	r := bufio.NewReader(in)
 	cont := false
-	e := event.New(out, maxLen, "\n", jsonKey)
+	e, err := event.New(out, ctx, maxLen, "\n", jsonKey)
+	if err != nil {
+		log.Fatal(err)
+	}
 	autoFlushDelay := 5 * time.Millisecond
 	go func() {
 		// Flush before exit

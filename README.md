@@ -10,6 +10,8 @@ The `golp` is a simple program that reads those kinds of log on its standard inp
 
 Options:
 
+    --ctx value
+            A key=value to add to the JSON output (can be repeated).
     --json
             Wrap messages to JSON one object per line.
     --json-key string
@@ -31,7 +33,13 @@ Send panics as JSON:
 
     mygoprogram 2>&1 | golp --json | logger -t mygoprogram -p local7.err
 
-    > Jan  8 16:59:26 host mygoprogram: {"message": "panic: panic: test\n\ngoroutine 1 [running]:\npanic(0x…
+    > Jan  8 16:59:26 host mygoprogram: {"message":"panic: panic: test\n\ngoroutine 1 [running]:\npanic(0x…
+
+Add context:
+
+    mygoprogram 2>&1 | golp --json --ctx level=error --ctx program=mygoprogram
+
+    > {"level":"info","program":"mygoprogram","message":"panic: panic: test\n\ngoroutine 1 [running]:\npanic(0x…
 
 ## License
 

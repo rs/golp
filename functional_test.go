@@ -15,14 +15,16 @@ func TestRun(t *testing.T) {
 		prefix  string
 		strip   bool
 		jsonKey string
+		ctx     map[string]string
 	}{
-		"default":      {"testdata/intput.txt", "testdata/output.txt", 0, "", false, ""},
-		"stripped":     {"testdata/intput.txt", "testdata/output_strip.txt", 0, "", true, ""},
-		"maxlen":       {"testdata/intput.txt", "testdata/output_maxlen.txt", 15, "", true, ""},
-		"json_strip":   {"testdata/intput.txt", "testdata/output_strip.json", 0, "", true, "message"},
-		"json_maxlen":  {"testdata/intput.txt", "testdata/output_maxlen.json", 26, "", true, "message"},
-		"prefix":       {"testdata/intput_prefix.txt", "testdata/output_prefix.txt", 0, "prefix ", false, ""},
-		"prefix_strip": {"testdata/intput_prefix.txt", "testdata/output_prefix_strip.txt", 0, "prefix ", true, ""},
+		"default":      {"testdata/intput.txt", "testdata/output.txt", 0, "", false, "", nil},
+		"stripped":     {"testdata/intput.txt", "testdata/output_strip.txt", 0, "", true, "", nil},
+		"maxlen":       {"testdata/intput.txt", "testdata/output_maxlen.txt", 15, "", true, "", nil},
+		"json_strip":   {"testdata/intput.txt", "testdata/output_strip.json", 0, "", true, "message", nil},
+		"json_maxlen":  {"testdata/intput.txt", "testdata/output_maxlen.json", 26, "", true, "message", nil},
+		"json_context": {"testdata/intput.txt", "testdata/output_context.json", 0, "", true, "message", map[string]string{"foo": "bar"}},
+		"prefix":       {"testdata/intput_prefix.txt", "testdata/output_prefix.txt", 0, "prefix ", false, "", nil},
+		"prefix_strip": {"testdata/intput_prefix.txt", "testdata/output_prefix_strip.txt", 0, "prefix ", true, "", nil},
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -38,7 +40,7 @@ func TestRun(t *testing.T) {
 			defer expect.Close()
 			eb, _ := ioutil.ReadAll(expect)
 			out := &bytes.Buffer{}
-			run(in, out, tt.maxLen, tt.prefix, tt.strip, tt.jsonKey)
+			run(in, out, tt.ctx, tt.maxLen, tt.prefix, tt.strip, tt.jsonKey)
 			if want, got := string(eb), out.String(); want != got {
 				t.Errorf("invalid output:\ngot:\n%s\nwant:\n%s", got, want)
 			}

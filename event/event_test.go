@@ -8,7 +8,7 @@ import (
 )
 
 func TestWriteEscape(t *testing.T) {
-	e := New(ioutil.Discard, 0, "", "")
+	e, _ := New(ioutil.Discard, nil, 0, "", "")
 	defer e.Close()
 	e.Write([]byte("\b\f\r\n\t\\\""))
 	if got, want := e.buf.String(), `\b\f\r\n\t\\\"`; got != want {
@@ -17,7 +17,7 @@ func TestWriteEscape(t *testing.T) {
 }
 
 func TestWriteMaxLen(t *testing.T) {
-	e := New(ioutil.Discard, 5, "", "")
+	e, _ := New(ioutil.Discard, nil, 5, "", "")
 	defer e.Close()
 	n, _ := e.Write([]byte("abcdefghij"))
 	if got, want := n, 5; got != want {
@@ -29,7 +29,7 @@ func TestWriteMaxLen(t *testing.T) {
 }
 
 func TestWriteMaxLenEscaping(t *testing.T) {
-	e := New(ioutil.Discard, 5, "", "")
+	e, _ := New(ioutil.Discard, nil, 5, "", "")
 	defer e.Close()
 	n, _ := e.Write([]byte("\n\n\n\n"))
 	if got, want := n, 4; got != want {
@@ -42,7 +42,7 @@ func TestWriteMaxLenEscaping(t *testing.T) {
 
 func TestFlushEol(t *testing.T) {
 	out := &bytes.Buffer{}
-	e := New(out, 0, "\n", "")
+	e, _ := New(out, nil, 0, "\n", "")
 	defer e.Close()
 	e.Write([]byte("line1\n"))
 	e.Write([]byte("line2"))
@@ -54,7 +54,7 @@ func TestFlushEol(t *testing.T) {
 
 func TestFlushJSON(t *testing.T) {
 	out := &bytes.Buffer{}
-	e := New(out, 0, "\n", "message")
+	e, _ := New(out, nil, 0, "\n", "message")
 	defer e.Close()
 	e.Write([]byte("line1\n"))
 	e.Write([]byte("line2"))
@@ -66,7 +66,7 @@ func TestFlushJSON(t *testing.T) {
 
 func TestFlushJSONMaxLen(t *testing.T) {
 	out := &bytes.Buffer{}
-	e := New(out, 25, "\n", "message")
+	e, _ := New(out, nil, 25, "\n", "message")
 	defer e.Close()
 	e.Write([]byte("line1\n"))
 	e.Write([]byte("line2"))
@@ -81,7 +81,7 @@ func TestFlushJSONMaxLen(t *testing.T) {
 
 func TestFlushEmpty(t *testing.T) {
 	out := &bytes.Buffer{}
-	e := New(out, 0, "\n", "")
+	e, _ := New(out, nil, 0, "\n", "")
 	defer e.Close()
 	e.Flush()
 	if got, want := out.String(), ""; got != want {
@@ -90,7 +90,7 @@ func TestFlushEmpty(t *testing.T) {
 }
 
 func TestEmpty(t *testing.T) {
-	e := New(ioutil.Discard, 0, "\n", "")
+	e, _ := New(ioutil.Discard, nil, 0, "\n", "")
 	defer e.Close()
 	if got, want := e.Empty(), true; got != want {
 		t.Errorf("got %v, want %v", got, want)
@@ -114,7 +114,7 @@ func TestAutoFlush(t *testing.T) {
 		autoFlushCalledHook = func() {}
 	}()
 	out := &bytes.Buffer{}
-	e := New(out, 0, "\n", "")
+	e, _ := New(out, nil, 0, "\n", "")
 	defer e.Close()
 	e.Write([]byte{'x'})
 	c := make(chan time.Time)

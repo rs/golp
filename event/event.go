@@ -3,6 +3,8 @@ package event
 
 import (
 	"bytes"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -29,8 +31,8 @@ var autoFlushCalledHook = func() {}
 // When flush, the eol string is appended to the event content.
 // When jsonKey is not empty, the output is wrapped into a JSON object
 // with jsonKey as message key.
-func New(out io.Writer, maxLen int, eol string, jsonKey string) *Event {
-	e := &Event{
+func New(out io.Writer, ctx map[string]string, maxLen int, eol string, jsonKey string) (e *Event, err error) {
+	e = &Event{
 		out:    out,
 		buf:    bytes.NewBuffer(make([]byte, 0, 4096)),
 		wbuf:   make([]byte, 0, 2),
@@ -39,14 +41,27 @@ func New(out io.Writer, maxLen int, eol string, jsonKey string) *Event {
 		stop:   make(chan bool),
 		close:  make(chan bool, 1),
 	}
+	var ctxJSON []byte
+	if len(ctx) > 0 {
+		ctxJSON, err = json.Marshal(ctx)
+		if err != nil {
+			return nil, err
+		}
+		// Prepare for embedding by removing { } and append a comma
+		ctxJSON = ctxJSON[1:]
+		ctxJSON[len(ctxJSON)-1] = ','
+	}
 	if jsonKey != "" {
-		e.prefix = []byte(fmt.Sprintf(`{"%s":"`, jsonKey))
+		e.prefix = []byte(fmt.Sprintf(`{%s"%s":"`, ctxJSON, jsonKey))
 		e.suffix = []byte(fmt.Sprintf(`"}%s`, eol))
 	} else {
 		e.suffix = []byte(eol)
 	}
+	if maxLen > 0 && maxLen < len(e.prefix)+len(e.suffix) {
+		return nil, errors.New("max len is lower than JSON envelope")
+	}
 	go e.autoFlushLoop()
-	return e
+	return
 }
 
 // Empty returns true if the event's buffer is empty.
