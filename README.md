@@ -12,9 +12,9 @@ Options:
 
     --json
             Wrap messages to JSON one object per line.
-    -json-key string
+    --json-key string
             The key name to use for the message in JSON mode. (default "message")
-    -max-len int
+    --max-len int
     	    Strip messages to not exceed this length.
     --prefix string
             Go logger prefix set in the application if any.
@@ -25,13 +25,13 @@ Send panics and other program panics to syslog:
 
     mygoprogram 2>&1 | golp | logger -t mygoprogram -p local7.err
 
-    > Jan  8 16:59:26 host panic: panic: test\n\ngoroutine 1 [running]:\npanic(0x…
+    > Jan  8 16:59:26 host mygoprogram: panic: panic: test\n\ngoroutine 1 [running]:\npanic(0x…
 
 Send panics as JSON:
 
     mygoprogram 2>&1 | golp --json | logger -t mygoprogram -p local7.err
 
-    > Jan  8 16:59:26 host {"message": "panic: panic: test\n\ngoroutine 1 [running]:\npanic(0x…
+    > Jan  8 16:59:26 host mygoprogram: {"message": "panic: panic: test\n\ngoroutine 1 [running]:\npanic(0x…
 
 Add some fields to the JSON output (using [jq](https://stedolan.github.io/jq/)):
 

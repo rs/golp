@@ -30,13 +30,13 @@
 //
 //     mygoprogram 2>&1 | golp | logger -t mygoprogram -p local7.err
 //
-//     > Jan  8 16:59:26 host panic: panic: test\n\ngoroutine 1 [running]:\npanic(0x…
+//     > Jan  8 16:59:26 host mygoprogram: panic: panic: test\n\ngoroutine 1 [running]:\npanic(0x…
 //
 // Send panics as JSON:
 //
 //     mygoprogram 2>&1 | golp --json | logger -t mygoprogram -p local7.err
 //
-//     > Jan  8 16:59:26 host {"message": "panic: panic: test\n\ngoroutine 1 [running]:\npanic(0x…
+//     > Jan  8 16:59:26 host mygoprogram: {"message": "panic: panic: test\n\ngoroutine 1 [running]:\npanic(0x…
 //
 // Add some fields to the JSON output (using [jq](https://stedolan.github.io/jq/)):
 //
