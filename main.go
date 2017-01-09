@@ -5,7 +5,7 @@
 //
 // The golp is a simple program that reads those kinds of log on its standard
 // input, and merge all lines of a given panic or standard multi-lines Go log message
-// into a single quotted line.
+// into a single quoted line.
 //
 // Usage
 //

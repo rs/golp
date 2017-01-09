@@ -4,7 +4,7 @@
 
 Go programs sometime generate output you can't easily control like panics and `net/http` recovered panics. By default, those output contains multiple lines with stack traces. This does not play well with most logging systems that will generate one log event per outputed line.
 
-The `golp` is a simple program that reads those kinds of log on its standard input, and merge all lines of a given panic or standard multi-lines Go log message into a single quotted line.
+The `golp` is a simple program that reads those kinds of log on its standard input, and merge all lines of a given panic or standard multi-lines Go log message into a single quoted line.
 
 ## Usage
 
