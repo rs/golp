@@ -1,4 +1,4 @@
-# Go Log Piper
+# Go Log Panic
 
 [![godoc](http://img.shields.io/badge/godoc-reference-blue.svg?style=flat)](https://godoc.org/github.com/rs/golp) [![license](http://img.shields.io/badge/license-MIT-red.svg?style=flat)](https://raw.githubusercontent.com/rs/golp/master/LICENSE) [![Build Status](https://travis-ci.org/rs/golp.svg?branch=master)](https://travis-ci.org/rs/golp) [![Coverage](http://gocover.io/_badge/github.com/rs/golp)](http://gocover.io/github.com/rs/golp)
 
