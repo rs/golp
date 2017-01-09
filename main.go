@@ -43,7 +43,7 @@
 //
 //     mygoprogram 2>&1 | golp --json --ctx level=error --ctx program=mygoprogram
 //
-//     > {"level":"info","program":"mygoprogram","message":"panic: panic: test\n\ngoroutine 1 [running]:\npanic(0x…
+//     > {"level":"error","program":"mygoprogram","message":"panic: panic: test\n\ngoroutine 1 [running]:\npanic(0x…
 package main
 
 import (
@@ -127,7 +127,7 @@ func run(in io.Reader, out io.Writer, ctx map[string]string, maxLen int, prefix 
 				// Flush previous event if any
 				e.Flush()
 				if strip {
-					// Strop log message header (prefix, timestamp)
+					// Strip log message header (prefix, timestamp)
 					line = line[index:]
 				}
 			} else if !e.Empty() {

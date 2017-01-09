@@ -39,7 +39,7 @@ Add context:
 
     mygoprogram 2>&1 | golp --json --ctx level=error --ctx program=mygoprogram
 
-    > {"level":"info","program":"mygoprogram","message":"panic: panic: test\n\ngoroutine 1 [running]:\npanic(0x…
+    > {"level":"error","program":"mygoprogram","message":"panic: panic: test\n\ngoroutine 1 [running]:\npanic(0x…
 
 ## License
 
