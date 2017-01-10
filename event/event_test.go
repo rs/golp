@@ -66,15 +66,16 @@ func TestFlushJSON(t *testing.T) {
 
 func TestFlushJSONMaxLen(t *testing.T) {
 	out := &bytes.Buffer{}
-	e, _ := New(out, nil, 25, "\n", "message")
+	e, _ := New(out, nil, 33, "\n", "message")
 	defer e.Close()
 	e.Write([]byte("line1\n"))
-	e.Write([]byte("line2"))
+	e.Write([]byte("line2\n"))
+	e.Write([]byte("line3"))
 	e.Flush()
-	if got, want := len(out.String()), 25; got != want {
+	if got, want := len(out.String()), 33; got != want {
 		t.Errorf("got %v, want %v", got, want)
 	}
-	if got, want := out.String(), "{\"message\":\"line1\\nlin\"}\n"; got != want {
+	if got, want := out.String(), "{\"message\":\"line1\\nline2[6]…\"}\n"; got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
 }

@@ -1,7 +1,7 @@
-{"message":"http: panic"}
-{"message":"line1\nline"}
-{"message":"line1\nline"}
-{"message":"line1\nline"}
-{"message":"/tmp/test.g"}
-{"message":"test.go:31:"}
-{"message":"panic: test"}
+{"message":"htt[821]…"}
+{"message":"line1[6]…"}
+{"message":"line1[6]…"}
+{"message":"line1[6]…"}
+{"message":"/tmp[22]…"}
+{"message":"test[17]…"}
+{"message":"pan[144]…"}

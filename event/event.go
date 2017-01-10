@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"strconv"
 	"time"
 )
 
@@ -17,7 +18,7 @@ type Event struct {
 	buf      *bytes.Buffer
 	wbuf     []byte
 	maxLen   int
-	exceeded bool
+	exceeded int
 	prefix   []byte
 	suffix   []byte
 	start    chan (<-chan time.Time) // timer
@@ -72,16 +73,17 @@ func (e *Event) Empty() bool {
 // Write appends the contents of p to the buffer. The return value
 // n is the length of p; err is always nil.
 func (e *Event) Write(p []byte) (n int, err error) {
-	if e.exceeded {
+	if e.exceeded > 0 {
+		e.exceeded += len(p)
 		return
 	}
 	overhead := len(e.prefix) + len(e.suffix)
 	if e.maxLen > 0 && e.buf.Len()+overhead > e.maxLen {
-		e.exceeded = true
+		e.exceeded = len(p)
 		return
 	}
 	e.buf.Grow(len(p))
-	for _, b := range p {
+	for i, b := range p {
 		e.wbuf = e.wbuf[:0]
 		switch b {
 		case '"':
@@ -102,7 +104,7 @@ func (e *Event) Write(p []byte) (n int, err error) {
 			e.wbuf = append(e.wbuf, b)
 		}
 		if e.maxLen > 0 && e.buf.Len()+overhead+len(e.wbuf) > e.maxLen {
-			e.exceeded = true
+			e.exceeded = len(p) - i
 			break
 		}
 		var _n int
@@ -137,6 +139,17 @@ func (e *Event) flush() {
 			log.Fatal(err)
 		}
 	}
+	if e.exceeded > 0 {
+		const elipses = "[]…" // size of … is 3 bytes
+		eb := []byte(strconv.FormatInt(int64(e.exceeded+len(elipses)), 10))
+		if t := e.buf.Len() - (len(eb) + len(elipses)); t > 0 {
+			// Insert [total_bytes_truncated]… at the end of the message is possible
+			e.buf.Truncate(t)
+			e.buf.WriteByte(elipses[0])
+			e.buf.Write(eb)
+			e.buf.WriteString(elipses[1:])
+		}
+	}
 	if len(e.suffix) > 0 {
 		e.buf.Write(e.suffix)
 	}
@@ -144,7 +157,7 @@ func (e *Event) flush() {
 		log.Fatal(err)
 	}
 	e.buf.Reset()
-	e.exceeded = false
+	e.exceeded = 0
 }
 
 // AutoFlush schedule a flush after delay.
