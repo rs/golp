@@ -140,14 +140,14 @@ func (e *Event) flush() {
 		}
 	}
 	if e.exceeded > 0 {
-		const elipses = "[]…" // size of … is 3 bytes
-		eb := []byte(strconv.FormatInt(int64(e.exceeded+len(elipses)), 10))
-		if t := e.buf.Len() - (len(eb) + len(elipses)); t > 0 {
+		const elipse = "[]…" // size of … is 3 bytes
+		eb := []byte(strconv.FormatInt(int64(e.exceeded+len(elipse)), 10))
+		if t := e.buf.Len() - (len(eb) + len(elipse)); t > 0 {
 			// Insert [total_bytes_truncated]… at the end of the message is possible
 			e.buf.Truncate(t)
-			e.buf.WriteByte(elipses[0])
+			e.buf.WriteByte(elipse[0])
 			e.buf.Write(eb)
-			e.buf.WriteString(elipses[1:])
+			e.buf.WriteString(elipse[1:])
 		}
 	}
 	if len(e.suffix) > 0 {
