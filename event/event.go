@@ -21,6 +21,7 @@ type Event struct {
 	exceeded int
 	prefix   []byte
 	suffix   []byte
+	flush    chan chan bool
 	start    chan (<-chan time.Time) // timer
 	stop     chan bool
 	close    chan bool
@@ -38,6 +39,7 @@ func New(out io.Writer, ctx map[string]string, maxLen int, eol string, jsonKey s
 		buf:    bytes.NewBuffer(make([]byte, 0, 4096)),
 		wbuf:   make([]byte, 0, 2),
 		maxLen: maxLen,
+		flush:  make(chan chan bool),
 		start:  make(chan (<-chan time.Time)),
 		stop:   make(chan bool),
 		close:  make(chan bool, 1),
@@ -61,7 +63,7 @@ func New(out io.Writer, ctx map[string]string, maxLen int, eol string, jsonKey s
 	if maxLen > 0 && maxLen < len(e.prefix)+len(e.suffix) {
 		return nil, errors.New("max len is lower than JSON envelope")
 	}
-	go e.autoFlushLoop()
+	go e.flushLoop()
 	return
 }
 
@@ -127,10 +129,14 @@ func (e *Event) Flush() {
 		return
 	}
 	e.Stop()
-	e.flush()
+	c := make(chan bool)
+	// Make the flushLoop to flush
+	e.flush <- c
+	// Wait for the flush to end
+	<-c
 }
 
-func (e *Event) flush() {
+func (e *Event) doFlush() {
 	if e.buf.Len() == 0 {
 		return
 	}
@@ -176,13 +182,16 @@ func (e *Event) Close() error {
 	return nil
 }
 
-func (e *Event) autoFlushLoop() {
+func (e *Event) flushLoop() {
 	paused := make(<-chan time.Time) // will never fire
 	next := paused
 	for {
 		select {
+		case done := <-e.flush:
+			e.doFlush()
+			close(done) // notify caller
 		case <-next:
-			e.flush()
+			e.doFlush()
 			autoFlushCalledHook()
 		case <-e.stop:
 			next = paused
