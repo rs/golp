@@ -92,10 +92,6 @@ func (e *Event) doWrite(p []byte) (n int, err error) {
 		return
 	}
 	overhead := len(e.prefix) + len(e.suffix)
-	if e.maxLen > 0 && e.buf.Len()+overhead > e.maxLen {
-		e.exceeded = len(p)
-		return
-	}
 	e.buf.Grow(len(p))
 	for i, b := range p {
 		e.wbuf = e.wbuf[:0]
