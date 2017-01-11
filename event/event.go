@@ -172,7 +172,7 @@ func (e *Event) Stop() {
 
 // Close stops the flush loop and releases resources.
 func (e *Event) Close() error {
-	e.close <- true
+	close(e.close)
 	return nil
 }
 
