@@ -106,6 +106,7 @@ func run(in io.Reader, out io.Writer, ctx map[string]string, maxLen int, prefix 
 		signal.Notify(c, os.Interrupt, os.Kill)
 		<-c
 		e.Flush()
+		os.Exit(1)
 	}()
 	for {
 		line, isPrefix, err := r.ReadLine()
