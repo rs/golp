@@ -41,7 +41,7 @@ func TestRun(t *testing.T) {
 			eb, _ := ioutil.ReadAll(expect)
 			out := &bytes.Buffer{}
 			run(in, out, tt.ctx, tt.maxLen, tt.prefix, tt.strip, tt.jsonKey)
-			if want, got := string(eb), out.String(); want != got {
+			if got, want := out.String(), string(eb); want != got {
 				t.Errorf("invalid output:\ngot:\n%s\nwant:\n%s", got, want)
 			}
 		})

@@ -2,6 +2,7 @@ package event
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"testing"
 	"time"
@@ -29,14 +30,38 @@ func TestWriteMaxLen(t *testing.T) {
 }
 
 func TestWriteMaxLenEscaping(t *testing.T) {
-	e, _ := New(ioutil.Discard, nil, 5, "", "")
-	defer e.Close()
-	n, _ := e.Write([]byte("\n\n\n\n"))
-	if got, want := n, 4; got != want {
-		t.Errorf("invalid n: got %v, want %v", got, want)
+	tests := []struct {
+		maxLen       int
+		input        string
+		output       string
+		len          int
+		outputMarker string
+		lenMarker    int
+	}{
+		{1, "abcd", `a`, 1, `a`, 1},
+		{10, "abcdefghijklmnopqrstuvwxyz", `abcdefghij`, 10, `abc[23]…`, 10},
+		{10, "ab\\cdf\n\n\n\n\n", `ab\\cdf\n`, 9, `ab[9]…`, 8},
 	}
-	if got, want := e.buf.String(), `\n\n`; got != want {
-		t.Errorf("got %q, want %q", got, want)
+	for i, tt := range tests {
+		t.Run(fmt.Sprintf("#%d", i), func(t *testing.T) {
+			out := &bytes.Buffer{}
+			e, _ := New(out, nil, tt.maxLen, "", "")
+			defer e.Close()
+			n, _ := e.Write([]byte(tt.input))
+			if got, want := n, tt.len; got != want {
+				t.Errorf("invalid n: got %v, want %v", got, want)
+			}
+			if got, want := e.buf.String(), tt.output; got != want {
+				t.Errorf("invalid buffer content: got %q, want %q", got, want)
+			}
+			e.Flush()
+			if got, want := out.Len(), tt.lenMarker; got != want {
+				t.Errorf("invalid length with marker: got %v, want %v", got, want)
+			}
+			if got, want := out.String(), tt.outputMarker; got != want {
+				t.Errorf("invalid output with marker: got %q, want %q", got, want)
+			}
+		})
 	}
 }
 

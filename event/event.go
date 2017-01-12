@@ -143,6 +143,15 @@ func (e *Event) Flush() {
 	<-c
 }
 
+// uintLen return the number of chars taken by an integer
+func uintLen(i uint) (l int) {
+	for i > 0 {
+		i /= 10
+		l++
+	}
+	return
+}
+
 func (e *Event) doFlush() {
 	if e.buf.Len() == 0 {
 		return
@@ -152,22 +161,49 @@ func (e *Event) doFlush() {
 			log.Fatal(err)
 		}
 	}
-	if e.exceeded > 0 {
-		const elipse = "[]…" // size of … is 3 bytes
-		eb := []byte(strconv.FormatInt(int64(e.exceeded+len(elipse)), 10))
-		if t := e.buf.Len() - (len(eb) + len(elipse)); t > 0 {
-			// Insert [total_bytes_truncated]… at the end of the message is possible
-			e.buf.Truncate(t)
-			e.buf.WriteByte(elipse[0])
-			e.buf.Write(eb)
-			e.buf.WriteString(elipse[1:])
+	// Insert [total_bytes_truncated]… at the end of the message is possible
+	const elipse = "[]…" // size of … is 3 bytes
+	if e.exceeded > 0 && e.buf.Len() > len(elipse)+1 {
+		msg := e.buf.Bytes()
+		// estimate truncated byte number including the marker
+		t := e.exceeded + len(elipse)
+		t += uintLen(uint(t) + 1) // add one in case the last char is \
+		if pos := len(msg) - (t - e.exceeded); pos > 0 {
+			// Ensure we don't cut in the middle of an escaped char by
+			// searching for the first \ of a continuous sequence of \
+			// and consider removing the current one if is not an escaped
+			// char itself
+			escapes := 0
+			for pos-escapes > 0 && msg[pos-escapes] == '\\' {
+				escapes++
+			}
+			if escapes > 0 {
+				pos -= (escapes + 1) % 2
+			}
+			// Compute the actual truncated bytes before escaping
+			t := e.exceeded
+			for i := pos; i < len(msg); i++ {
+				if msg[i] == '\\' {
+					// Skip escaped char from the count
+					i++
+				}
+				t++
+			}
+			eb := strconv.FormatInt(int64(t), 10)
+			msg = append(msg[:pos], elipse[0])
+			msg = append(msg, eb...)
+			msg = append(msg, elipse[1:]...)
+		}
+		e.out.Write(msg)
+	} else {
+		if _, err := io.Copy(e.out, e.buf); err != nil {
+			log.Fatal(err)
 		}
 	}
 	if len(e.suffix) > 0 {
-		e.buf.Write(e.suffix)
-	}
-	if _, err := io.Copy(e.out, e.buf); err != nil {
-		log.Fatal(err)
+		if _, err := e.out.Write(e.suffix); err != nil {
+			log.Fatal(err)
+		}
 	}
 	e.buf.Reset()
 	e.exceeded = 0
