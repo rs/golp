@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"strconv"
 	"time"
 )
@@ -145,11 +146,10 @@ func (e *Event) Flush() {
 
 // uintLen return the number of chars taken by an integer
 func uintLen(i uint) (l int) {
-	for i > 0 {
-		i /= 10
-		l++
+	if i == 0 {
+		return 1
 	}
-	return
+	return int(math.Log10(float64(i))) + 1
 }
 
 func (e *Event) doFlush() {
