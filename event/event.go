@@ -167,7 +167,7 @@ func (e *Event) doFlush() {
 		msg := e.buf.Bytes()
 		// estimate truncated byte number including the marker
 		t := e.exceeded + len(elipse)
-		t += uintLen(uint(t) + 1) // add one in case the last char is \
+		t += uintLen(uint(t))
 		if pos := len(msg) - (t - e.exceeded); pos > 0 {
 			// Ensure we don't cut in the middle of an escaped char by
 			// searching for the first \ of a continuous sequence of \
