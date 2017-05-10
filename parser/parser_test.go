@@ -50,3 +50,15 @@ func TestIsLog(t *testing.T) {
 		}
 	}
 }
+
+func TestIsJSON(t *testing.T) {
+	tests := map[string]bool{
+		`{"foo":"bar"}`: true,
+		`foo bar`:       false,
+	}
+	for line, want := range tests {
+		if got := IsJSON([]byte(line)); got != want {
+			t.Errorf("match failed with %q: got %v want %v", line, got, want)
+		}
+	}
+}

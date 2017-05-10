@@ -36,6 +36,15 @@ func IsLog(line []byte, prefix string) int {
 	return -1
 }
 
+// IsJSON return true if the line look like a full JSON object (no validation performed).
+func IsJSON(line []byte) bool {
+	if len(line) < 4 {
+		return false
+	}
+	last := len(line) - 1
+	return line[0] == '{' && line[1] == '"' && line[last-1] == '"' && line[last] == '}'
+}
+
 // matchPattern return true if the given line starts with the given pattern.
 // The pattern match if all non numeric characters match and if all numeric
 // character are (non necessary equal) numbers on both sides.

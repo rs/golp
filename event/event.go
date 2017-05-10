@@ -15,18 +15,25 @@ import (
 
 // Event holds a buffer of a log event content.
 type Event struct {
-	out      io.Writer
-	buf      *bytes.Buffer
-	wbuf     []byte
-	maxLen   int
-	exceeded int
-	prefix   []byte
-	suffix   []byte
-	write    chan func()
-	flush    chan chan bool
-	start    chan (<-chan time.Time) // timer
-	stop     chan bool
-	close    chan bool
+	// AllowJSON allows JSON input. When this option is true and the input is
+	// JSON, the maxlen option can not be enforced.
+	AllowJSON bool
+
+	out        io.Writer
+	buf        *bytes.Buffer
+	wbuf       []byte
+	maxLen     int
+	exceeded   int
+	prefix     []byte
+	suffix     []byte
+	isJSON     bool
+	jsonPrefix []byte
+	jsonSuffix []byte
+	write      chan func()
+	flush      chan chan bool
+	start      chan (<-chan time.Time) // timer
+	stop       chan bool
+	close      chan bool
 }
 
 var autoFlushCalledHook = func() {}
@@ -54,9 +61,13 @@ func New(out io.Writer, ctx map[string]string, maxLen int, eol string, jsonKey s
 			return nil, err
 		}
 		// Prepare for embedding by removing { } and append a comma
-		ctxJSON = ctxJSON[1:]
 		ctxJSON[len(ctxJSON)-1] = ','
+		e.jsonPrefix = ctxJSON // store {ctx, for insertion when input is already JSON
+		ctxJSON = ctxJSON[1:]
+	} else {
+		e.jsonPrefix = []byte{'{'}
 	}
+	e.jsonSuffix = []byte(eol)
 	if jsonKey != "" {
 		e.prefix = []byte(fmt.Sprintf(`{%s"%s":"`, ctxJSON, jsonKey))
 		e.suffix = []byte(fmt.Sprintf(`"}%s`, eol))
@@ -87,7 +98,29 @@ func (e *Event) Write(p []byte) (n int, err error) {
 	return
 }
 
+// isJSON returns true if b *seems* to contain a JSON object
+func isJSON(b []byte) bool {
+	if len(b) < 2 {
+		return false
+	}
+	return b[0] == '{' && b[1] == '"'
+}
+
 func (e *Event) doWrite(p []byte) (n int, err error) {
+	if e.AllowJSON && !e.isJSON && e.buf.Len() == 0 {
+		// Check if the line start as a JSON object.
+		// If JSON, insert the context and write directly to the output.
+		e.isJSON = isJSON(p)
+		if e.isJSON {
+			e.out.Write(e.jsonPrefix)
+			n, err = e.out.Write(p[1:]) // skip the {
+			return n + 1, err
+		}
+	}
+	if e.isJSON {
+		// Input is already JSON, do not escape or compute exceeding
+		return e.out.Write(p)
+	}
 	if e.exceeded > 0 {
 		e.exceeded += len(p)
 		return
@@ -134,7 +167,7 @@ func (e *Event) doWrite(p []byte) (n int, err error) {
 //
 // If an AutoFlush was in progress, it is stopped by this operation.
 func (e *Event) Flush() {
-	if e.buf.Len() == 0 {
+	if e.buf.Len() == 0 && !e.isJSON {
 		return
 	}
 	c := make(chan bool)
@@ -153,6 +186,13 @@ func uintLen(i uint) (l int) {
 }
 
 func (e *Event) doFlush() {
+	if e.isJSON {
+		e.isJSON = false
+		if _, err := e.out.Write(e.jsonSuffix); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
 	if e.buf.Len() == 0 {
 		return
 	}
@@ -161,9 +201,9 @@ func (e *Event) doFlush() {
 			log.Fatal(err)
 		}
 	}
-	// Insert [total_bytes_truncated]… at the end of the message is possible
 	const elipse = "[]…" // size of … is 3 bytes
 	if e.exceeded > 0 && e.buf.Len() > len(elipse)+1 {
+		// Insert [total_bytes_truncated]… at the end of the message if possible
 		msg := e.buf.Bytes()
 		// estimate truncated byte number including the marker
 		t := e.exceeded + len(elipse)

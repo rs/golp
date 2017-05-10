@@ -115,6 +115,26 @@ func TestFlushEmpty(t *testing.T) {
 	}
 }
 
+func TestAllowJSON(t *testing.T) {
+	out := &bytes.Buffer{}
+	e, _ := New(out, nil, 0, "\n", "")
+	e.AllowJSON = true
+	defer e.Close()
+	e.Write([]byte(`{"foo":"bar"}`))
+	e.Flush()
+	if got, want := out.String(), "{\"foo\":\"bar\"}\n"; got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+
+	out.Reset()
+	e.AllowJSON = false
+	e.Write([]byte(`{"foo":"bar"}`))
+	e.Flush()
+	if got, want := out.String(), "{\\\"foo\\\":\\\"bar\\\"}\n"; got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
 func TestEmpty(t *testing.T) {
 	e, _ := New(ioutil.Discard, nil, 0, "\n", "")
 	defer e.Close()

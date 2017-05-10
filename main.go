@@ -81,7 +81,8 @@ func main() {
 	maxLen := flag.Int("max-len", 0, "Strip messages to not exceed this length.")
 	prefix := flag.String("prefix", "", "Go logger prefix set in the application if any.")
 	strip := flag.Bool("strip", false, "Strip log line timestamps on output.")
-	json := flag.Bool("json", false, "Wrap messages to JSON one object per line.")
+	json := flag.Bool("json", false, "Wrap messages to one JSON object per line.")
+	allowJSON := flag.Bool("allow-json", false, "Allow JSON input not to be escaped. When enabled, max-len is not efforced on JSON lines.")
 	jsonKey := flag.String("json-key", "message", "The key name to use for the message in JSON mode.")
 	ctx := context{}
 	flag.Var(&ctx, "ctx", "A key=value to add to the JSON output (can be repeated).")
@@ -89,16 +90,17 @@ func main() {
 	if !*json {
 		*jsonKey = ""
 	}
-	run(os.Stdin, os.Stdout, ctx, *maxLen, *prefix, *strip, *jsonKey)
+	run(os.Stdin, os.Stdout, ctx, *maxLen, *prefix, *strip, *jsonKey, *allowJSON)
 }
 
-func run(in io.Reader, out io.Writer, ctx map[string]string, maxLen int, prefix string, strip bool, jsonKey string) {
+func run(in io.Reader, out io.Writer, ctx map[string]string, maxLen int, prefix string, strip bool, jsonKey string, allowJSON bool) {
 	r := bufio.NewReader(in)
 	cont := false
 	e, err := event.New(out, ctx, maxLen, "\n", jsonKey)
 	if err != nil {
 		log.Fatal(err)
 	}
+	e.AllowJSON = allowJSON
 	autoFlushDelay := 5 * time.Millisecond
 	go func() {
 		// Flush before exit
@@ -131,6 +133,12 @@ func run(in io.Reader, out io.Writer, ctx map[string]string, maxLen int, prefix 
 					// Strip log message header (prefix, timestamp)
 					line = line[index:]
 				}
+			} else if allowJSON && parser.IsJSON(line) {
+				// Flush previous event if any
+				e.Flush()
+				e.Write(line)
+				e.Flush()
+				continue
 			} else if !e.Empty() {
 				// The line is a continuation, add a quoted carriage return before
 				// appending it to the current event.
