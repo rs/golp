@@ -42,7 +42,7 @@ func IsJSON(line []byte) bool {
 		return false
 	}
 	last := len(line) - 1
-	return line[0] == '{' && line[1] == '"' && line[last-1] == '"' && line[last] == '}'
+	return line[0] == '{' && line[1] == '"' && line[last] == '}'
 }
 
 // matchPattern return true if the given line starts with the given pattern.
