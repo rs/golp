@@ -1,4 +1,4 @@
-package main
+package golp
 
 import (
 	"bytes"
@@ -44,7 +44,17 @@ func TestRun(t *testing.T) {
 			defer expect.Close()
 			eb, _ := ioutil.ReadAll(expect)
 			out := &bytes.Buffer{}
-			run(in, out, tt.ctx, tt.maxLen, tt.prefix, tt.strip, tt.jsonKey, tt.allowJSON)
+			g := Golp{
+				In:         in,
+				Out:        out,
+				Context:    tt.ctx,
+				MaxLen:     tt.maxLen,
+				Prefix:     tt.prefix,
+				Strip:      tt.strip,
+				AllowJSON:  tt.allowJSON,
+				MessageKey: tt.jsonKey,
+			}
+			g.Run()
 			if got, want := out.String(), string(eb); want != got {
 				t.Errorf("invalid output:\ngot:\n%s\nwant:\n%s", got, want)
 			}

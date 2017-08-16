@@ -49,20 +49,15 @@
 package main
 
 import (
-	"bufio"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"os"
-	"os/signal"
 	"strings"
-	"time"
 
-	"github.com/rs/golp/event"
 	"github.com/rs/golp/file"
-	"github.com/rs/golp/parser"
+	"github.com/rs/golp/golp"
 )
 
 type context map[string]string
@@ -98,64 +93,15 @@ func main() {
 	if *output != "" {
 		out = file.Output{*output}
 	}
-	run(os.Stdin, out, ctx, *maxLen, *prefix, *strip, *jsonKey, *allowJSON)
-}
-
-func run(in io.Reader, out io.Writer, ctx map[string]string, maxLen int, prefix string, strip bool, jsonKey string, allowJSON bool) {
-	r := bufio.NewReader(in)
-	cont := false
-	e, err := event.New(out, ctx, maxLen, "\n", jsonKey)
-	if err != nil {
-		log.Fatal(err)
+	g := golp.Golp{
+		In:         os.Stdin,
+		Out:        out,
+		Context:    ctx,
+		MaxLen:     *maxLen,
+		Prefix:     *prefix,
+		Strip:      *strip,
+		AllowJSON:  *allowJSON,
+		MessageKey: *jsonKey,
 	}
-	e.AllowJSON = allowJSON
-	autoFlushDelay := 5 * time.Millisecond
-	go func() {
-		// Flush before exit
-		c := make(chan os.Signal, 1)
-		signal.Notify(c, os.Interrupt, os.Kill)
-		<-c
-		e.Flush()
-		os.Exit(1)
-	}()
-	for {
-		line, isPrefix, err := r.ReadLine()
-		if err != nil {
-			e.Flush()
-			if err != io.EOF {
-				log.Fatal(err)
-			}
-			break
-		}
-		// Stop the previous auto-flush if any so we don't accidently flush
-		// before reading the new line.
-		e.Stop()
-		if !cont {
-			if parser.IsPanic(line) {
-				// Flush previous event if any
-				e.Flush()
-			} else if index := parser.IsLog(line, prefix); index > 0 {
-				// Flush previous event if any
-				e.Flush()
-				if strip {
-					// Strip log message header (prefix, timestamp)
-					line = line[index:]
-				}
-			} else if allowJSON && parser.IsJSON(line) {
-				// Flush previous event if any
-				e.Flush()
-				e.Write(line)
-				e.Flush()
-				continue
-			} else if !e.Empty() {
-				// The line is a continuation, add a quoted carriage return before
-				// appending it to the current event.
-				e.Write([]byte{'\n'})
-			}
-		}
-		e.Write(line)
-		// Auto-flush the event after if no new line is read for the given delay.
-		e.AutoFlush(autoFlushDelay)
-		cont = isPrefix
-	}
+	g.Run()
 }
