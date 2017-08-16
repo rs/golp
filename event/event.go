@@ -15,15 +15,12 @@ import (
 
 // Event holds a buffer of a log event content.
 type Event struct {
-	// AllowJSON allows JSON input. When this option is true and the input is
-	// JSON, the maxlen option can not be enforced.
-	AllowJSON bool
-
 	out        io.Writer
 	buf        *bytes.Buffer
 	wbuf       []byte
 	maxLen     int
 	exceeded   int
+	allowJSON  bool
 	prefix     []byte
 	suffix     []byte
 	isJSON     bool
@@ -36,49 +33,88 @@ type Event struct {
 	close      chan bool
 }
 
+type Option func(e *Event) error
+
 var autoFlushCalledHook = func() {}
 
 // New creates an event buffer writing to the out writer on flush.
-// When flush, the eol string is appended to the event content.
-// When jsonKey is not empty, the output is wrapped into a JSON object
-// with jsonKey as message key.
-func New(out io.Writer, ctx map[string]string, maxLen int, eol string, jsonKey string) (e *Event, err error) {
+func New(out io.Writer, options ...Option) (e *Event, err error) {
 	e = &Event{
-		out:    out,
-		buf:    bytes.NewBuffer(make([]byte, 0, 4096)),
-		wbuf:   make([]byte, 0, 2),
-		maxLen: maxLen,
-		write:  make(chan func()),
-		flush:  make(chan chan bool),
-		start:  make(chan (<-chan time.Time)),
-		stop:   make(chan bool),
-		close:  make(chan bool, 1),
+		out:        out,
+		buf:        bytes.NewBuffer(make([]byte, 0, 4096)),
+		wbuf:       make([]byte, 0, 2),
+		maxLen:     0,
+		write:      make(chan func()),
+		flush:      make(chan chan bool),
+		start:      make(chan (<-chan time.Time)),
+		stop:       make(chan bool),
+		close:      make(chan bool, 1),
+		jsonSuffix: []byte("\n"),
+		suffix:     []byte("\n"),
 	}
-	var ctxJSON []byte
-	if len(ctx) > 0 {
-		ctxJSON, err = json.Marshal(ctx)
-		if err != nil {
+	for _, option := range options {
+		if err := option(e); err != nil {
 			return nil, err
 		}
-		// Prepare for embedding by removing { } and append a comma
-		ctxJSON[len(ctxJSON)-1] = ','
-		e.jsonPrefix = ctxJSON // store {ctx, for insertion when input is already JSON
-		ctxJSON = ctxJSON[1:]
-	} else {
-		e.jsonPrefix = []byte{'{'}
 	}
-	e.jsonSuffix = []byte(eol)
-	if jsonKey != "" {
-		e.prefix = []byte(fmt.Sprintf(`{%s"%s":"`, ctxJSON, jsonKey))
-		e.suffix = []byte(fmt.Sprintf(`"}%s`, eol))
-	} else {
-		e.suffix = []byte(eol)
-	}
-	if maxLen > 0 && maxLen < len(e.prefix)+len(e.suffix) {
+	if e.maxLen > 0 && e.maxLen < len(e.prefix)+len(e.suffix) {
 		return nil, errors.New("max len is lower than JSON envelope")
 	}
 	go e.writeLoop()
 	return
+}
+
+// AllowJSON allows JSON input. When this option is true and the input is JSON,
+// the maxlen option can not be enforced.
+func AllowJSON(enabled bool, context map[string]string) Option {
+	return func(e *Event) error {
+		e.allowJSON = enabled
+		if len(context) > 0 {
+			ctxJSON, err := json.Marshal(context)
+			if err != nil {
+				return err
+			}
+			// Prepare for embedding by removing { } and append a comma
+			ctxJSON[len(ctxJSON)-1] = ','
+			e.jsonPrefix = ctxJSON // store {ctx, for insertion when input is already JSON
+		} else {
+			e.jsonPrefix = []byte{'{'}
+		}
+		return nil
+	}
+}
+
+// JSONOutput makes the event output formatted as JSON. The content of the
+// message is written as the messageKey key and the context is added to the JSON
+// object.
+func JSONOutput(messageKey string, context map[string]string) Option {
+	return func(e *Event) (err error) {
+		if messageKey == "" {
+			messageKey = "msg"
+		}
+		var ctxJSON []byte
+		if len(context) > 0 {
+			ctxJSON, err = json.Marshal(context)
+			if err != nil {
+				return
+			}
+			// Prepare for embedding by removing { } and append a comma
+			ctxJSON[len(ctxJSON)-1] = ','
+			ctxJSON = ctxJSON[1:]
+		}
+		e.prefix = []byte(fmt.Sprintf(`{%s"%s":"`, ctxJSON, messageKey))
+		e.suffix = []byte("\"}\n")
+		return
+	}
+}
+
+// MaxLen defines a maximum len for the output event. If the event is larger,
+// the message is truncated to fix into maxLen.
+func MaxLen(maxLen int) Option {
+	return func(e *Event) error {
+		e.maxLen = maxLen
+		return nil
+	}
 }
 
 // Empty returns true if the event's buffer is empty.
@@ -107,7 +143,7 @@ func isJSON(b []byte) bool {
 }
 
 func (e *Event) doWrite(p []byte) (n int, err error) {
-	if e.AllowJSON && !e.isJSON && e.buf.Len() == 0 {
+	if e.allowJSON && !e.isJSON && e.buf.Len() == 0 {
 		// Check if the line start as a JSON object.
 		// If JSON, insert the context and write directly to the output.
 		e.isJSON = isJSON(p)

@@ -26,11 +26,17 @@ type Golp struct {
 func (g Golp) Run() {
 	r := bufio.NewReader(g.In)
 	cont := false
-	e, err := event.New(g.Out, g.Context, g.MaxLen, "\n", g.MessageKey)
+	options := []event.Option{
+		event.MaxLen(g.MaxLen),
+		event.AllowJSON(g.AllowJSON, g.Context),
+	}
+	if g.MessageKey != "" {
+		options = append(options, event.JSONOutput(g.MessageKey, g.Context))
+	}
+	e, err := event.New(g.Out, options...)
 	if err != nil {
 		log.Fatal(err)
 	}
-	e.AllowJSON = g.AllowJSON
 	autoFlushDelay := 5 * time.Millisecond
 	go func() {
 		// Flush before exit

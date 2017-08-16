@@ -9,7 +9,7 @@ import (
 )
 
 func TestWriteEscape(t *testing.T) {
-	e, _ := New(ioutil.Discard, nil, 0, "", "")
+	e, _ := New(ioutil.Discard)
 	defer e.Close()
 	e.Write([]byte("\b\f\r\n\t\\\""))
 	if got, want := e.buf.String(), `\b\f\r\n\t\\\"`; got != want {
@@ -18,13 +18,13 @@ func TestWriteEscape(t *testing.T) {
 }
 
 func TestWriteMaxLen(t *testing.T) {
-	e, _ := New(ioutil.Discard, nil, 5, "", "")
+	e, _ := New(ioutil.Discard, MaxLen(5))
 	defer e.Close()
 	n, _ := e.Write([]byte("abcdefghij"))
-	if got, want := n, 5; got != want {
+	if got, want := n, 4; got != want {
 		t.Errorf("invalid n: got %v, want %v", got, want)
 	}
-	if got, want := e.buf.String(), "abcde"; got != want {
+	if got, want := e.buf.String(), "abcd"; got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
 }
@@ -38,14 +38,14 @@ func TestWriteMaxLenEscaping(t *testing.T) {
 		outputMarker string
 		lenMarker    int
 	}{
-		{1, "abcd", `a`, 1, `a`, 1},
-		{10, "abcdefghijklmnopqrstuvwxyz", `abcdefghij`, 10, `abc[23]…`, 10},
-		{10, "ab\\cdf\n\n\n\n\n", `ab\\cdf\n`, 9, `ab[9]…`, 8},
+		{1, "abcd", ``, 0, ``, 0},
+		{10, "abcdefghijklmnopqrstuvwxyz", `abcdefghi`, 9, "ab[24]…\n", 10},
+		{10, "ab\\cdf\n\n\n\n\n", `ab\\cdf\n`, 9, "ab[9]…\n", 9},
 	}
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("#%d", i), func(t *testing.T) {
 			out := &bytes.Buffer{}
-			e, _ := New(out, nil, tt.maxLen, "", "")
+			e, _ := New(out, MaxLen(tt.maxLen))
 			defer e.Close()
 			n, _ := e.Write([]byte(tt.input))
 			if got, want := n, tt.len; got != want {
@@ -65,21 +65,9 @@ func TestWriteMaxLenEscaping(t *testing.T) {
 	}
 }
 
-func TestFlushEol(t *testing.T) {
-	out := &bytes.Buffer{}
-	e, _ := New(out, nil, 0, "\n", "")
-	defer e.Close()
-	e.Write([]byte("line1\n"))
-	e.Write([]byte("line2"))
-	e.Flush()
-	if got, want := out.String(), "line1\\nline2\n"; got != want {
-		t.Errorf("got %q, want %q", got, want)
-	}
-}
-
 func TestFlushJSON(t *testing.T) {
 	out := &bytes.Buffer{}
-	e, _ := New(out, nil, 0, "\n", "message")
+	e, _ := New(out, JSONOutput("message", nil))
 	defer e.Close()
 	e.Write([]byte("line1\n"))
 	e.Write([]byte("line2"))
@@ -91,7 +79,7 @@ func TestFlushJSON(t *testing.T) {
 
 func TestFlushJSONMaxLen(t *testing.T) {
 	out := &bytes.Buffer{}
-	e, _ := New(out, nil, 33, "\n", "message")
+	e, _ := New(out, MaxLen(33), JSONOutput("message", nil))
 	defer e.Close()
 	e.Write([]byte("line1\n"))
 	e.Write([]byte("line2\n"))
@@ -107,7 +95,7 @@ func TestFlushJSONMaxLen(t *testing.T) {
 
 func TestFlushEmpty(t *testing.T) {
 	out := &bytes.Buffer{}
-	e, _ := New(out, nil, 0, "\n", "")
+	e, _ := New(out)
 	defer e.Close()
 	e.Flush()
 	if got, want := out.String(), ""; got != want {
@@ -117,8 +105,7 @@ func TestFlushEmpty(t *testing.T) {
 
 func TestAllowJSON(t *testing.T) {
 	out := &bytes.Buffer{}
-	e, _ := New(out, nil, 0, "\n", "")
-	e.AllowJSON = true
+	e, _ := New(out, AllowJSON(true, nil))
 	defer e.Close()
 	e.Write([]byte(`{"foo":"bar"}`))
 	e.Flush()
@@ -127,7 +114,7 @@ func TestAllowJSON(t *testing.T) {
 	}
 
 	out.Reset()
-	e.AllowJSON = false
+	e, _ = New(out)
 	e.Write([]byte(`{"foo":"bar"}`))
 	e.Flush()
 	if got, want := out.String(), "{\\\"foo\\\":\\\"bar\\\"}\n"; got != want {
@@ -136,7 +123,7 @@ func TestAllowJSON(t *testing.T) {
 }
 
 func TestEmpty(t *testing.T) {
-	e, _ := New(ioutil.Discard, nil, 0, "\n", "")
+	e, _ := New(ioutil.Discard)
 	defer e.Close()
 	if got, want := e.Empty(), true; got != want {
 		t.Errorf("got %v, want %v", got, want)
@@ -160,7 +147,7 @@ func TestAutoFlush(t *testing.T) {
 		autoFlushCalledHook = func() {}
 	}()
 	out := &bytes.Buffer{}
-	e, _ := New(out, nil, 0, "\n", "")
+	e, _ := New(out)
 	defer e.Close()
 	e.Write([]byte{'x'})
 	c := make(chan time.Time)
