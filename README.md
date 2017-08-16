@@ -10,18 +10,22 @@ The `golp` is a simple program that reads those kinds of log on its standard inp
 
 Options:
 
-    --ctx value
-            A key=value to add to the JSON output (can be repeated).
-    --json
-            Wrap messages to JSON one object per line.
-    --json-key string
-            The key name to use for the message in JSON mode. (default "message")
-    --max-len int
-    	    Strip messages to not exceed this length.
-    --prefix string
-            Go logger prefix set in the application if any.
-    --strip
-            Strip log line timestamps on output.
+    -allow-json
+        Allow JSON input not to be escaped. When enabled, max-len is not efforced on JSON lines.
+    -ctx value
+        A key=value to add to the JSON output (can be repeated).
+    -json
+        Wrap messages to one JSON object per line.
+    -json-key string
+        The key name to use for the message in JSON mode. (default "message")
+    -max-len int
+        Strip messages to not exceed this length.
+    -output string
+        A file to append events to. Default output is stdout.
+    -prefix string
+        Go logger prefix set in the application if any.
+    -strip
+        Strip log line timestamps on output.
 
 Send panics and other program panics to syslog:
 
