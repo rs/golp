@@ -1,0 +1,7 @@
+{"foo":"bar","message":"http: panic serving 127.0.0.1:62329: bla\ngoroutine 7 [running]:\nnet/http.(*conn).serve.func1(0xc42007c300)\n\t/go/src/net/http/server.go:1491 +0x12a\npanic(0x207c20, 0xc42000d5a0)\n\t/go/src/runtime/panic.go:458 +0x243\nmain.main.func1(0x35a880, 0xc420075520, 0xc4200d40f0)\n\t/tmp/test.go:24 +0x6d\nnet/http.HandlerFunc.ServeHTTP(0x27d838, 0x35a880, 0xc420075520, 0xc4200d40f0)\n\t/go/src/net/http/server.go:1726 +0x44\nnet/http.(*ServeMux).ServeHTTP(0x3746c0, 0x35a880, 0xc420075520, 0xc4200d40f0)\n\t/go/src/net/http/server.go:2022 +0x7f\nnet/http.serverHandler.ServeHTTP(0xc42007c280, 0x35a880, 0xc420075520, 0xc4200d40f0)\n\t/go/src/net/http/server.go:2202 +0x7d\nnet/http.(*conn).serve(0xc42007c300, 0x35acc0, 0xc420010680)\n\t/go/src/net/http/server.go:1579 +0x4b7\ncreated by net/http.(*Server).Serve\n\t/go/src/net/http/server.go:2293 +0x44d","time":"0001-01-01T00:00:00Z"}
+{"foo":"bar","message":"line1\nline2","time":"0001-01-01T00:00:00Z"}
+{"foo":"bar","message":"line1\nline2","time":"0001-01-01T00:00:00Z"}
+{"foo":"bar","message":"line1\nline2","time":"0001-01-01T00:00:00Z"}
+{"foo":"bar","message":"/tmp/test.go:31: line1\nline2","time":"0001-01-01T00:00:00Z"}
+{"foo":"bar","message":"test.go:31: line1\nline2","time":"0001-01-01T00:00:00Z"}
+{"foo":"bar","message":"panic: test\n\ngoroutine 1 [running]:\npanic(0x56000, 0xc42000a190)\n\t/go/src/runtime/panic.go:500 +0x1a1\nmain.main()\n\t/tmp/panic.go:4 +0x6d\nexit status 2","time":"0001-01-01T00:00:00Z"}

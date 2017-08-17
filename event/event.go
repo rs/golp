@@ -2,6 +2,7 @@
 package event
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -15,7 +16,7 @@ import (
 
 // Event holds a buffer of a log event content.
 type Event struct {
-	out        io.Writer
+	out        *bufio.Writer
 	buf        *bytes.Buffer
 	wbuf       []byte
 	maxLen     int
@@ -26,12 +27,17 @@ type Event struct {
 	isJSON     bool
 	jsonPrefix []byte
 	jsonSuffix []byte
+	timePrefix []byte
+	timeFormat string
 	write      chan func()
 	flush      chan chan bool
 	start      chan (<-chan time.Time) // timer
 	stop       chan bool
 	close      chan bool
 }
+
+// TimestampFunc is called to generate timestamps.
+var TimestampFunc = time.Now
 
 type Option func(e *Event) error
 
@@ -40,7 +46,7 @@ var autoFlushCalledHook = func() {}
 // New creates an event buffer writing to the out writer on flush.
 func New(out io.Writer, options ...Option) (e *Event, err error) {
 	e = &Event{
-		out:        out,
+		out:        bufio.NewWriterSize(out, 4096),
 		buf:        bytes.NewBuffer(make([]byte, 0, 4096)),
 		wbuf:       make([]byte, 0, 2),
 		maxLen:     0,
@@ -57,8 +63,14 @@ func New(out io.Writer, options ...Option) (e *Event, err error) {
 			return nil, err
 		}
 	}
-	if e.maxLen > 0 && e.maxLen < len(e.prefix)+len(e.suffix) {
-		return nil, errors.New("max len is lower than JSON envelope")
+	if e.maxLen > 0 {
+		minPayload := len(e.prefix) + len(e.suffix)
+		if len(e.timePrefix) > 0 {
+			minPayload += len(e.timePrefix) + len(e.timeFormat)
+		}
+		if e.maxLen < minPayload {
+			return nil, errors.New("max len is lower than JSON envelope")
+		}
 	}
 	go e.writeLoop()
 	return
@@ -105,6 +117,22 @@ func JSONOutput(messageKey string, context map[string]string) Option {
 		e.prefix = []byte(fmt.Sprintf(`{%s"%s":"`, ctxJSON, messageKey))
 		e.suffix = []byte("\"}\n")
 		return
+	}
+}
+
+// AddTimestamp adds a timestamp to each event using the provided format.
+// If the output is json, the value is added to the jsonKey key.
+// If JSON input is allowed and input is JSON, no timestamp is added.
+// JSONOutput must be used before this option.
+func AddTimestamp(jsonKey, format string) Option {
+	return func(e *Event) error {
+		if len(e.prefix) == 0 {
+			return errors.New("AddTimestamp used before JSONOutput")
+		}
+		e.timePrefix = []byte(fmt.Sprintf(`","%s":`, jsonKey))
+		e.timeFormat = format
+		e.suffix = []byte("}\n")
+		return nil
 	}
 }
 
@@ -222,6 +250,11 @@ func uintLen(i uint) (l int) {
 }
 
 func (e *Event) doFlush() {
+	defer func() {
+		if err := e.out.Flush(); err != nil {
+			log.Fatal(err)
+		}
+	}()
 	if e.isJSON {
 		e.isJSON = false
 		if _, err := e.out.Write(e.jsonSuffix); err != nil {
@@ -273,6 +306,15 @@ func (e *Event) doFlush() {
 		e.out.Write(msg)
 	} else {
 		if _, err := io.Copy(e.out, e.buf); err != nil {
+			log.Fatal(err)
+		}
+	}
+	if len(e.timePrefix) > 0 {
+		if _, err := e.out.Write(e.timePrefix); err != nil {
+			log.Fatal(err)
+		}
+		ts := strconv.Quote(TimestampFunc().Format(e.timeFormat))
+		if _, err := e.out.WriteString(ts); err != nil {
 			log.Fatal(err)
 		}
 	}

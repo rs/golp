@@ -13,14 +13,15 @@ import (
 )
 
 type Golp struct {
-	In         io.Reader
-	Out        io.Writer
-	Context    map[string]string
-	MaxLen     int
-	Prefix     string
-	Strip      bool
-	AllowJSON  bool
-	MessageKey string
+	In           io.Reader
+	Out          io.Writer
+	Context      map[string]string
+	MaxLen       int
+	Prefix       string
+	Strip        bool
+	AllowJSON    bool
+	MessageKey   string
+	AddTimestamp bool
 }
 
 func (g Golp) Run() {
@@ -32,6 +33,9 @@ func (g Golp) Run() {
 	}
 	if g.MessageKey != "" {
 		options = append(options, event.JSONOutput(g.MessageKey, g.Context))
+		if g.AddTimestamp {
+			options = append(options, event.AddTimestamp("time", time.RFC3339))
+		}
 	}
 	e, err := event.New(g.Out, options...)
 	if err != nil {

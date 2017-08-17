@@ -82,6 +82,7 @@ func main() {
 	json := flag.Bool("json", false, "Wrap messages to one JSON object per line.")
 	allowJSON := flag.Bool("allow-json", false, "Allow JSON input not to be escaped. When enabled, max-len is not efforced on JSON lines.")
 	jsonKey := flag.String("json-key", "message", "The key name to use for the message in JSON mode.")
+	addTimestamp := flag.Bool("add-timestamp", false, "Add a timestamp key to the JSON output (requires json option).")
 	output := flag.String("output", "", "A file to append events to. Default output is stdout.")
 	ctx := context{}
 	flag.Var(&ctx, "ctx", "A key=value to add to the JSON output (can be repeated).")
@@ -94,14 +95,15 @@ func main() {
 		out = file.Output{*output}
 	}
 	g := golp.Golp{
-		In:         os.Stdin,
-		Out:        out,
-		Context:    ctx,
-		MaxLen:     *maxLen,
-		Prefix:     *prefix,
-		Strip:      *strip,
-		AllowJSON:  *allowJSON,
-		MessageKey: *jsonKey,
+		In:           os.Stdin,
+		Out:          out,
+		Context:      ctx,
+		MaxLen:       *maxLen,
+		Prefix:       *prefix,
+		Strip:        *strip,
+		AllowJSON:    *allowJSON,
+		MessageKey:   *jsonKey,
+		AddTimestamp: *addTimestamp,
 	}
 	g.Run()
 }
