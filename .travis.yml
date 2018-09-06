@@ -1,7 +1,14 @@
 language: go
 go:
-- 1.7
-- tip
+- "1.11"
+- "tip"
 matrix:
   allow_failures:
       - go: tip
+deploy:
+- provider: script
+  skip_cleanup: true
+  script: curl -sL http://git.io/goreleaser | bash
+  on:
+    tags: true
+    condition: "$TRAVIS_OS_NAME = linux && $TRAVIS_GO_VERSION = '1.11'"

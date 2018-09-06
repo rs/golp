@@ -1,0 +1,15 @@
+project_name: golp
+builds:
+  -
+    binary: golp
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+      - freebsd
+      - windows
+release:
+  name_template: "{{.ProjectName}}-v{{.Version}}"
+git:
+  short_hash: true
