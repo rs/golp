@@ -1,7 +1,17 @@
 language: go
 go:
-- 1.7
+- '1.11'
 - tip
 matrix:
   allow_failures:
-      - go: tip
+  - go: tip
+deploy:
+- provider: script
+  skip_cleanup: true
+  script: curl -sL http://git.io/goreleaser | bash
+  on:
+    tags: true
+    condition: "$TRAVIS_OS_NAME = linux && $TRAVIS_GO_VERSION = '1.11'"
+env:
+  global:
+    secure: pNwJQmfsNHj/lONcFIenx+me9hhiFsdUogvKJ0+1ciHdcKat26l/HHcdx+77lsMJ3wM4c7futOAmJfeTc9+ZzcB4Pd0pBFuCgIbcRMHq+p/iz6nN33Y9YRMliHFt9Dxs7erclf884zo0Gzslcz2P744Jmt3wGN8xRrTbJ4SDb0Mrho0xa4R4TH1c8m8QeFsXtAa3xveapYbkC16jteBXLSPbylLM/VuuUX4hrt8MhZAh14aedmQPe5JH3ok70CakgPKJbyBdiwoXpbTc5XDnMVLWroA7HiqHOUqWfxH5TNglnwI0ALBDIZOxV2Ua0JByDNY5lCGAvw3+eUBAZWjwBviCe9Q3gx4+NO+Ix9iO/CH+nbJk+L8xczXO4Z3/vDq/5UdTNc35fTEIH7y0pHSD9m/2XMkEhOAvaKvJSugxFhZHm4jY6j0VphgJpX5/yYtJcymTDOBvQgoYpR+wyDjwuFZjl5TsodTjoULpD38DOGi9EH3/zSs6/MkEKUgAtz/6BNX5U2L0rPm29HrdMe/2vKGuwibU0uJ8dBKJzBqCdsMnjrmZXgJRmkDfTCqFeBS2kaL2hfRTO0zHeO+l6EJft/KX4l7/1gotNlLM4oCbqF1eEpZTDUB1rhHRUMG7KcDmhhRp8Vg3BE69dsz5wvgBZGIQEg7nT1+JynhfPMBWPRE=
