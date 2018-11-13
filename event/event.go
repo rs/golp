@@ -330,7 +330,7 @@ func (e *Event) doFlush() {
 }
 
 func logWriteErr(err error) {
-	log.Printf("Write error: %v", err)
+	log.Printf("golp: write error: %v", err)
 }
 
 // AutoFlush schedule a flush after delay.
