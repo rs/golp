@@ -252,13 +252,13 @@ func uintLen(i uint) (l int) {
 func (e *Event) doFlush() {
 	defer func() {
 		if err := e.out.Flush(); err != nil {
-			log.Fatal(err)
+			logWriteErr(err)
 		}
 	}()
 	if e.isJSON {
 		e.isJSON = false
 		if _, err := e.out.Write(e.jsonSuffix); err != nil {
-			log.Fatal(err)
+			logWriteErr(err)
 		}
 		return
 	}
@@ -267,7 +267,7 @@ func (e *Event) doFlush() {
 	}
 	if len(e.prefix) > 0 {
 		if _, err := e.out.Write(e.prefix); err != nil {
-			log.Fatal(err)
+			logWriteErr(err)
 		}
 	}
 	const elipse = "[]…" // size of … is 3 bytes
@@ -303,28 +303,34 @@ func (e *Event) doFlush() {
 			msg = append(msg, eb...)
 			msg = append(msg, elipse[1:]...)
 		}
-		e.out.Write(msg)
+		if _, err := e.out.Write(msg); err != nil {
+			logWriteErr(err)
+		}
 	} else {
 		if _, err := io.Copy(e.out, e.buf); err != nil {
-			log.Fatal(err)
+			logWriteErr(err)
 		}
 	}
 	if len(e.timePrefix) > 0 {
 		if _, err := e.out.Write(e.timePrefix); err != nil {
-			log.Fatal(err)
+			logWriteErr(err)
 		}
 		ts := strconv.Quote(TimestampFunc().Format(e.timeFormat))
 		if _, err := e.out.WriteString(ts); err != nil {
-			log.Fatal(err)
+			logWriteErr(err)
 		}
 	}
 	if len(e.suffix) > 0 {
 		if _, err := e.out.Write(e.suffix); err != nil {
-			log.Fatal(err)
+			logWriteErr(err)
 		}
 	}
 	e.buf.Reset()
 	e.exceeded = 0
+}
+
+func logWriteErr(err error) {
+	log.Printf("Write error: %v", err)
 }
 
 // AutoFlush schedule a flush after delay.

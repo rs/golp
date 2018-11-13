@@ -83,7 +83,8 @@ func main() {
 	allowJSON := flag.Bool("allow-json", false, "Allow JSON input not to be escaped. When enabled, max-len is not efforced on JSON lines.")
 	jsonKey := flag.String("json-key", "message", "The key name to use for the message in JSON mode.")
 	addTimestamp := flag.Bool("add-timestamp", false, "Add a timestamp key to the JSON output (requires json option).")
-	output := flag.String("output", "", "A file to append events to. Default output is stdout.")
+	output := flag.String("output", "", "A file to append events to. Default output is stdout. "+
+		"Use unix: or unixgram: prefix for output on a UNIX socket.")
 	ctx := context{}
 	flag.Var(&ctx, "ctx", "A key=value to add to the JSON output (can be repeated).")
 	flag.Parse()
