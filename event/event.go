@@ -270,7 +270,7 @@ func (e *Event) doFlush() {
 			logWriteErr(err)
 		}
 	}
-	const elipse = "[]…" // size of … is 3 bytes
+	const elipse = "[]..."
 	if e.exceeded > 0 && e.buf.Len() > len(elipse)+1 {
 		// Insert [total_bytes_truncated]… at the end of the message if possible
 		msg := e.buf.Bytes()

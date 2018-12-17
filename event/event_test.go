@@ -39,8 +39,8 @@ func TestWriteMaxLenEscaping(t *testing.T) {
 		lenMarker    int
 	}{
 		{1, "abcd", ``, 0, ``, 0},
-		{10, "abcdefghijklmnopqrstuvwxyz", `abcdefghi`, 9, "ab[24]…\n", 10},
-		{10, "ab\\cdf\n\n\n\n\n", `ab\\cdf\n`, 9, "ab[9]…\n", 9},
+		{10, "abcdefghijklmnopqrstuvwxyz", `abcdefghi`, 9, "ab[24]...\n", 10},
+		{10, "ab\\cdf\n\n\n\n\n", `ab\\cdf\n`, 9, "ab[9]...\n", 9},
 	}
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("#%d", i), func(t *testing.T) {
@@ -88,7 +88,7 @@ func TestFlushJSONMaxLen(t *testing.T) {
 	if got, want := len(out.String()), 33; got != want {
 		t.Errorf("got %v, want %v", got, want)
 	}
-	if got, want := out.String(), "{\"message\":\"line1\\nline2[6]…\"}\n"; got != want {
+	if got, want := out.String(), "{\"message\":\"line1\\nline2[6]...\"}\n"; got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
 }
